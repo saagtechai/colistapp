@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e0f11" />
+  <meta name="description" content="AI-powered Airbnb co-listing market intelligence tool" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Colist" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Colist — Airbnb Co-Listing Intelligence" />
+  <meta property="og:description" content="AI-estimated Airbnb pricing for any address. Generate owner pitches & export to CSV." />
+  <meta property="og:type" content="website" />
+
+  <title>Colist — Airbnb Co-Listing Intelligence</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <style>
+    :root {
+      --bg: #0e0f11;
+      --surface: #16181c;
+      --surface2: #1e2024;
+      --accent: #ff6b3d;
+      --accent-dark: #ff4f1f;
+      --text: #f0ede8;
+      --text-muted: rgba(240,237,232,0.4);
+      --text-faint: rgba(240,237,232,0.22);
+      --border: rgba(255,255,255,0.1);
+      --border-soft: rgba(255,255,255,0.07);
+      --green: #4ee89a;
+      --radius: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Safe area for notch/home bar */
+    .app {
+      padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 80px) env(safe-area-inset-left, 0);
+    }
+
+    /* ── Header ── */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(14,15,17,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 0.5px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { font-family: 'DM Serif Display', serif; font-size: 24px; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); font-style: italic; }
+    .header-right { font-size: 11px; color: var(--text-muted); text-align: right; line-height: 1.4; }
+
+    /* ── Screens ── */
+    .screen { display: none; padding: 20px; padding-bottom: 100px; }
+    .screen.active { display: block; }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 60;
+      background: rgba(14,15,17,0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 0;
+      cursor: pointer;
+      transition: color 0.2s;
+      color: var(--text-muted);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      border: none;
+      background: none;
+    }
+
+    .nav-item i { font-size: 22px; }
+    .nav-item.active { color: var(--accent); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .card:active { border-color: rgba(255,107,61,0.4); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 0.5px solid var(--border-soft);
+    }
+
+    .addr-icon {
+      width: 34px; height: 34px;
+      background: rgba(255,107,61,0.15);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent); font-size: 16px; flex-shrink: 0;
+    }
+
+    .addr-text { font-size: 13px; font-weight: 500; }
+    .addr-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .badge {
+      font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap;
+    }
+    .badge-high { background: rgba(78,232,154,0.15); color: var(--green); }
+    .badge-med { background: rgba(255,190,60,0.15); color: #ffc23a; }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .metric {
+      padding: 14px 16px;
+      border-right: 0.5px solid var(--border-soft);
+      border-bottom: 0.5px solid var(--border-soft);
+    }
+    .metric:nth-child(2) { border-right: none; }
+    .metric:nth-child(3) { border-bottom: none; }
+    .metric:nth-child(4) { border-right: none; border-bottom: none; }
+
+    .metric-label { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+    .metric-value { font-family: 'DM Serif Display', serif; font-size: 22px; letter-spacing: -0.5px; line-height: 1; }
+    .metric-value.green { color: var(--green); }
+    .metric-sub { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    .card-insight {
+      padding: 10px 16px;
+      border-top: 0.5px solid var(--border-soft);
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .card-actions {
+      padding: 10px 16px;
+      border-top: 0.5px solid var(--border-soft);
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-pitch {
+      flex: 1;
+      background: rgba(255,107,61,0.12);
+      color: var(--accent);
+      border: 0.5px solid rgba(255,107,61,0.3);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      transition: background 0.2s;
+    }
+    .btn-pitch:active { background: rgba(255,107,61,0.25); }
+
+    .btn-remove {
+      background: none;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 9px 12px;
+      font-size: 15px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-remove:active { color: var(--accent); border-color: var(--accent); }
+
+    /* ── Form ── */
+    .form-section {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 10px; display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--bg);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 13px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 10px;
+      -webkit-appearance: none;
+    }
+
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text-faint); }
+    .form-input:last-child { margin-bottom: 0; }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 4px;
+    }
+    .btn-primary:active { background: var(--accent-dark); transform: scale(0.99); }
+    .btn-primary:disabled { background: #444; cursor: not-allowed; }
+
+    /* ── Owner fields on card ── */
+    .owner-section {
+      padding: 12px 16px;
+      border-top: 0.5px solid var(--border-soft);
+      background: rgba(255,255,255,0.02);
+    }
+    .owner-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .owner-input {
+      width: 100%;
+      background: var(--bg);
+      border: 0.5px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      margin-bottom: 6px;
+      transition: border-color 0.2s;
+    }
+    .owner-input:last-child { margin-bottom: 0; }
+    .owner-input:focus { border-color: var(--accent); }
+    .owner-input::placeholder { color: var(--text-faint); }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      border: 0.5px dashed var(--border);
+      border-radius: var(--radius);
+    }
+    .empty-icon { font-size: 48px; color: rgba(240,237,232,0.12); margin-bottom: 12px; }
+    .empty-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: rgba(240,237,232,0.4); }
+    .empty-sub { font-size: 13px; color: rgba(240,237,232,0.25); margin-top: 6px; line-height: 1.5; }
+
+    /* ── Loading ── */
+    .loading-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,107,61,0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: var(--text-muted); }
+
+    /* ── Error ── */
+    .error-msg { font-size: 12px; color: var(--accent); margin-top: 8px; padding-left: 2px; display: none; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .toolbar.visible { display: flex; }
+    .count-label { font-size: 12px; color: var(--text-muted); }
+    .btn-export {
+      background: transparent;
+      color: var(--text);
+      border: 0.5px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color 0.2s;
+    }
+    .btn-export:active { border-color: rgba(255,255,255,0.5); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 0.5px solid var(--border-soft);
+    }
+    .modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
+    .modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px; }
+    .modal-body { padding: 20px; }
+    .pitch-loading { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 14px; }
+    .pitch-text { font-size: 15px; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+    .modal-footer {
+      padding: 12px 20px 16px;
+      border-top: 0.5px solid var(--border-soft);
+    }
+    .btn-copy {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn-copy:active { background: var(--accent-dark); }
+
+    /* ── Settings Screen ── */
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px;
+      border-bottom: 0.5px solid var(--border-soft);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 14px; }
+    .settings-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .settings-value { font-size: 13px; color: var(--text-muted); }
+    .api-key-input {
+      width: 100%;
+      background: var(--bg);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      margin-top: 8px;
+    }
+    .api-key-input:focus { border-color: var(--accent); }
+    .api-key-input::placeholder { color: var(--text-faint); }
+    .btn-save {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .section-title {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted); padding: 0 0 10px 2px;
+    }
+
+    /* ── Install Banner ── */
+    .install-banner {
+      background: rgba(255,107,61,0.12);
+      border: 0.5px solid rgba(255,107,61,0.3);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .install-banner i { font-size: 22px; color: var(--accent); flex-shrink: 0; }
+    .install-text { flex: 1; }
+    .install-title { font-size: 13px; font-weight: 500; }
+    .install-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .install-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 4px; flex-shrink: 0; }
+
+    .trend-up { color: var(--green); }
+    .trend-down { color: var(--accent); }
+    .trend-flat { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">co<span>list</span></div>
+  <div class="header-right">AI-powered<br>Airbnb intelligence</div>
+</div>
+
+<!-- Screens -->
+
+<!-- ── Properties Screen ── -->
+<div class="screen active" id="screen-properties">
+  <div id="installBanner" class="install-banner" style="display:none">
+    <i class="ti ti-device-mobile" aria-hidden="true"></i>
+    <div class="install-text">
+      <div class="install-title">Add to Home Screen</div>
+      <div class="install-sub">Install Colist for quick access anytime</div>
+    </div>
+    <button class="install-close" onclick="dismissInstall()" aria-label="Dismiss"><i class="ti ti-x"></i></button>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <span class="count-label" id="countLabel"></span>
+    <button class="btn-export" onclick="exportCSV()">
+      <i class="ti ti-download" aria-hidden="true"></i> Export CSV
+    </button>
+  </div>
+
+  <div id="propertiesList">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon"><i class="ti ti-building-community" aria-hidden="true"></i></div>
+      <div class="empty-title">No properties yet</div>
+      <div class="empty-sub">Tap the + button below to analyze<br>an address for Airbnb pricing</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Property Screen ── -->
+<div class="screen" id="screen-add">
+  <div class="form-section">
+    <label class="form-label">Property address</label>
+    <input class="form-input" id="addrInput" type="text" placeholder="123 Main St, Austin, TX" autocomplete="street-address" />
+  </div>
+
+  <div class="form-section">
+    <label class="form-label">Owner details <span style="opacity:0.5;font-style:italic;text-transform:none;letter-spacing:0">(optional)</span></label>
+    <input class="form-input" id="ownerName" type="text" placeholder="Owner name" autocomplete="name" />
+    <input class="form-input" id="ownerPhone" type="tel" placeholder="Phone number" autocomplete="tel" />
+    <input class="form-input" id="ownerEmail" type="email" placeholder="Email address" autocomplete="email" />
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <button class="btn-primary" id="analyzeBtn" onclick="analyzeProperty()">
+    <i class="ti ti-sparkles" aria-hidden="true"></i> Analyze property
+  </button>
+</div>
+
+<!-- ── Settings Screen ── -->
+<div class="screen" id="screen-settings">
+  <div style="margin-bottom:20px">
+    <div class="section-title">API Configuration</div>
+    <div class="card">
+      <div style="padding:16px">
+        <div class="settings-label">Anthropic API Key</div>
+        <div class="settings-sub" style="color:rgba(240,237,232,0.4);font-size:12px;margin-top:2px">Required to run AI estimates and pitch generation</div>
+        <input class="api-key-input" id="apiKeyInput" type="password" placeholder="sk-ant-..." />
+        <button class="btn-save" onclick="saveApiKey()">Save API Key</button>
+        <div id="apiSaveMsg" style="font-size:12px;color:var(--green);margin-top:8px;display:none"><i class="ti ti-check" style="margin-right:4px"></i>Saved successfully</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:20px">
+    <div class="section-title">About</div>
+    <div class="card">
+      <div class="settings-row">
+        <div><div class="settings-label">App version</div></div>
+        <div class="settings-value">1.0.0</div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">AI model</div></div>
+        <div class="settings-value">Claude Sonnet 4</div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Total properties</div></div>
+        <div class="settings-value" id="totalProps">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">Data</div>
+    <div class="card">
+      <div class="settings-row" style="cursor:pointer" onclick="exportCSV()">
+        <div><div class="settings-label"><i class="ti ti-download" style="margin-right:6px;font-size:15px;vertical-align:-2px"></i>Export all as CSV</div></div>
+        <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+      </div>
+      <div class="settings-row" style="cursor:pointer" onclick="clearAll()">
+        <div><div class="settings-label" style="color:#ff6b3d"><i class="ti ti-trash" style="margin-right:6px;font-size:15px;vertical-align:-2px"></i>Clear all properties</div></div>
+        <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+  <button class="nav-item active" id="nav-properties" onclick="showScreen('properties')" aria-label="Properties">
+    <i class="ti ti-building-community" aria-hidden="true"></i>
+    Properties
+  </button>
+  <button class="nav-item" id="nav-add" onclick="showScreen('add')" aria-label="Add property">
+    <i class="ti ti-plus" aria-hidden="true"></i>
+    Add
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="showScreen('settings')" aria-label="Settings">
+    <i class="ti ti-settings" aria-hidden="true"></i>
+    Settings
+  </button>
+</nav>
+
+<!-- Pitch Modal -->
+<div class="modal-overlay" id="pitchModal" onclick="if(event.target===this)closePitch()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">Co-listing pitch</div>
+      <button class="modal-close" onclick="closePitch()" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="pitchBody">
+      <div class="pitch-loading"><div class="spinner"></div> Generating your pitch…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-copy" id="copyBtn" onclick="copyPitch()" style="display:none">
+        <i class="ti ti-copy" aria-hidden="true"></i> Copy pitch
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Service Worker ──
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+
+  // ── State ──
+  const properties = [];
+  let pitchText = '';
+  let deferredInstallPrompt = null;
+
+  // ── API Key ──
+  function getApiKey() {
+    return localStorage.getItem('colist_api_key') || '';
+  }
+
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('colist_api_key', key);
+    const msg = document.getElementById('apiSaveMsg');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 2500);
+  }
+
+  // Load saved API key
+  window.addEventListener('DOMContentLoaded', () => {
+    const saved = getApiKey();
+    if (saved) document.getElementById('apiKeyInput').value = saved;
+  });
+
+  // ── Navigation ──
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'settings') {
+      document.getElementById('totalProps').textContent = properties.length;
+    }
+  }
+
+  // ── Install PWA ──
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    document.getElementById('installBanner').style.display = 'flex';
+  });
+
+  function dismissInstall() {
+    document.getElementById('installBanner').style.display = 'none';
+  }
+
+  // ── Analyze ──
+  async function analyzeProperty() {
+    const input = document.getElementById('addrInput');
+    const btn = document.getElementById('analyzeBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const address = input.value.trim();
+    const ownerName = document.getElementById('ownerName').value.trim();
+    const ownerPhone = document.getElementById('ownerPhone').value.trim();
+    const ownerEmail = document.getElementById('ownerEmail').value.trim();
+
+    if (!address) {
+      errorMsg.textContent = 'Please enter a property address.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      errorMsg.textContent = 'Please add your Anthropic API key in Settings first.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+
+    errorMsg.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Analyzing…';
+
+    // Switch to properties screen and show loading
+    showScreen('properties');
+    const loadingId = 'loading-' + Date.now();
+    document.getElementById('emptyState').style.display = 'none';
+    addLoadingCard(loadingId, address);
+
+    // Clear form
+    input.value = '';
+    document.getElementById('ownerName').value = '';
+    document.getElementById('ownerPhone').value = '';
+    document.getElementById('ownerEmail').value = '';
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: `You are an Airbnb market analyst. Given a property address, estimate realistic Airbnb market data for that area. Respond ONLY with a valid JSON object, no markdown, no explanation:
+{"avgNightlyRate":145,"estimatedMonthlyRevenue":2900,"occupancyRate":68,"comparableListings":34,"confidence":"high","marketTrend":"up","insight":"One specific sentence about this market.","currency":"USD","bedsAssumed":2}
+Base estimates on real market knowledge. confidence: "high" for well-known markets, "medium" otherwise. marketTrend: "up","flat","down". insight must be specific and useful for a co-listing agent.`,
+          messages: [{ role: 'user', content: `Estimate Airbnb market data for: ${address}` }]
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      const text = data.content.map(i => i.text || '').join('');
+      const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+      removeLoadingCard(loadingId);
+      const propId = 'prop-' + Date.now();
+      properties.push({ id: propId, address, ownerName, ownerPhone, ownerEmail, ...result });
+      addPropertyCard(propId, address, ownerName, ownerPhone, ownerEmail, result);
+      updateToolbar();
+    } catch (err) {
+      removeLoadingCard(loadingId);
+      if (!document.querySelector('.property-card')) document.getElementById('emptyState').style.display = 'block';
+      showScreen('add');
+      errorMsg.textContent = 'Error: ' + (err.message || 'Could not fetch estimate.');
+      errorMsg.style.display = 'block';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-sparkles"></i> Analyze property';
+  }
+
+  function addLoadingCard(id, address) {
+    const list = document.getElementById('propertiesList');
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = 'loading-card';
+    div.innerHTML = `<div class="spinner"></div><div class="loading-text">Analyzing <strong style="color:var(--text)">${address}</strong>…</div>`;
+    list.insertBefore(div, list.firstChild);
+  }
+
+  function removeLoadingCard(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function addPropertyCard(id, address, ownerName, ownerPhone, ownerEmail, d) {
+    const list = document.getElementById('propertiesList');
+    const card = document.createElement('div');
+    card.className = 'property-card card';
+    card.id = id;
+    const confClass = d.confidence === 'high' ? 'badge-high' : 'badge-med';
+    const confLabel = d.confidence === 'high' ? 'High confidence' : 'Med confidence';
+    const trendIcon = d.marketTrend === 'up' ? 'ti-trending-up' : d.marketTrend === 'down' ? 'ti-trending-down' : 'ti-minus';
+    const trendClass = d.marketTrend === 'up' ? 'trend-up' : d.marketTrend === 'down' ? 'trend-down' : 'trend-flat';
+    const fmt = v => '$' + Number(v).toLocaleString();
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+          <div class="addr-icon"><i class="ti ti-map-pin" aria-hidden="true"></i></div>
+          <div style="min-width:0">
+            <div class="addr-text" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${address}</div>
+            <div class="addr-sub">~${d.bedsAssumed} bed · ${d.currency}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+          <i class="ti ${trendIcon} ${trendClass}" aria-hidden="true" style="font-size:16px"></i>
+          <span class="badge ${confClass}">${confLabel}</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-label">Avg nightly rate</div>
+          <div class="metric-value">${fmt(d.avgNightlyRate)}</div>
+          <div class="metric-sub">per night</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Monthly revenue</div>
+          <div class="metric-value green">${fmt(d.estimatedMonthlyRevenue)}</div>
+          <div class="metric-sub">estimated</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Occupancy</div>
+          <div class="metric-value">${d.occupancyRate}%</div>
+          <div class="metric-sub">area avg</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Comparable</div>
+          <div class="metric-value">${d.comparableListings}</div>
+          <div class="metric-sub">listings nearby</div>
+        </div>
+      </div>
+      <div class="owner-section">
+        <div class="owner-label"><i class="ti ti-user" aria-hidden="true" style="margin-right:4px"></i>Owner contact</div>
+        <input class="owner-input" placeholder="Owner name" value="${ownerName}" onchange="updateOwner('${id}','ownerName',this.value)" />
+        <input class="owner-input" placeholder="Phone number" type="tel" value="${ownerPhone}" onchange="updateOwner('${id}','ownerPhone',this.value)" />
+        <input class="owner-input" placeholder="Email address" type="email" value="${ownerEmail}" onchange="updateOwner('${id}','ownerEmail',this.value)" />
+      </div>
+      <div class="card-insight"><i class="ti ti-bulb" aria-hidden="true" style="margin-right:5px"></i>${d.insight}</div>
+      <div class="card-actions">
+        <button class="btn-pitch" onclick="generatePitch('${id}')"><i class="ti ti-message-2" aria-hidden="true"></i> Generate pitch</button>
+        <button class="btn-remove" onclick="removeCard('${id}')" aria-label="Remove property"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      </div>`;
+
+    list.insertBefore(card, list.firstChild);
+  }
+
+  function updateOwner(id, field, value) {
+    const prop = properties.find(p => p.id === id);
+    if (prop) prop[field] = value;
+  }
+
+  function removeCard(id) {
+    const idx = properties.findIndex(p => p.id === id);
+    if (idx > -1) properties.splice(idx, 1);
+    const el = document.getElementById(id);
+    if (el) el.remove();
+    updateToolbar();
+    if (properties.length === 0) document.getElementById('emptyState').style.display = 'block';
+  }
+
+  function updateToolbar() {
+    const tb = document.getElementById('toolbar');
+    const cl = document.getElementById('countLabel');
+    if (properties.length > 0) {
+      tb.classList.add('visible');
+      cl.textContent = properties.length + ' propert' + (properties.length === 1 ? 'y' : 'ies');
+    } else {
+      tb.classList.remove('visible');
+    }
+  }
+
+  // ── Pitch ──
+  async function generatePitch(id) {
+    const prop = properties.find(p => p.id === id);
+    if (!prop) return;
+    const apiKey = getApiKey();
+    if (!apiKey) { alert('Please add your Anthropic API key in Settings first.'); return; }
+
+    pitchText = '';
+    document.getElementById('copyBtn').style.display = 'none';
+    document.getElementById('pitchBody').innerHTML = '<div class="pitch-loading"><div class="spinner"></div> Generating your pitch…</div>';
+    document.getElementById('pitchModal').classList.add('open');
+
+    try {
+      const ownerRef = prop.ownerName ? `The property owner's name is ${prop.ownerName}.` : '';
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: `You are an expert Airbnb co-listing agent. Write a compelling, professional outreach pitch to a vacant property owner to co-list on Airbnb. Be warm, specific, and persuasive. Use real numbers. Under 200 words. No subject line — just the body. Sound like a real human agent, not a template.`,
+          messages: [{ role: 'user', content: `Write a co-listing pitch for:\nAddress: ${prop.address}\n${ownerRef}\nAvg nightly rate: $${prop.avgNightlyRate}\nEst. monthly revenue: $${prop.estimatedMonthlyRevenue}\nOccupancy rate: ${prop.occupancyRate}%\nComparable listings: ${prop.comparableListings}\nMarket insight: ${prop.insight}` }]
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      pitchText = data.content.map(i => i.text || '').join('');
+      document.getElementById('pitchBody').innerHTML = `<div class="pitch-text">${pitchText}</div>`;
+      document.getElementById('copyBtn').style.display = 'flex';
+    } catch (err) {
+      document.getElementById('pitchBody').innerHTML = `<div style="color:var(--accent);font-size:13px">Error: ${err.message || 'Failed to generate pitch.'}</div>`;
+    }
+  }
+
+  function closePitch() {
+    document.getElementById('pitchModal').classList.remove('open');
+  }
+
+  function copyPitch() {
+    navigator.clipboard.writeText(pitchText).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.innerHTML = '<i class="ti ti-check"></i> Copied!';
+      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i> Copy pitch'; }, 2000);
+    });
+  }
+
+  // ── Export ──
+  function exportCSV() {
+    if (properties.length === 0) { alert('No properties to export yet.'); return; }
+    const headers = ['Address','Owner Name','Phone','Email','Avg Nightly Rate','Est. Monthly Revenue','Occupancy Rate (%)','Comparable Listings','Confidence','Market Trend','Insight'];
+    const rows = properties.map(p => [
+      `"${p.address}"`, `"${p.ownerName||''}"`, `"${p.ownerPhone||''}"`, `"${p.ownerEmail||''}"`,
+      p.avgNightlyRate, p.estimatedMonthlyRevenue, p.occupancyRate, p.comparableListings,
+      p.confidence, p.marketTrend, `"${(p.insight||'').replace(/"/g,'""')}"`
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'colist-properties.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function clearAll() {
+    if (properties.length === 0) return;
+    if (!confirm('Clear all properties? This cannot be undone.')) return;
+    properties.length = 0;
+    document.getElementById('propertiesList').innerHTML = `
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon"><i class="ti ti-building-community"></i></div>
+        <div class="empty-title">No properties yet</div>
+        <div class="empty-sub">Tap the + button below to analyze<br>an address for Airbnb pricing</div>
+      </div>`;
+    updateToolbar();
+    document.getElementById('totalProps').textContent = '0';
+  }
+</script>
+</body>
+</html>
